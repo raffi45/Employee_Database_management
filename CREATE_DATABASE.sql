@@ -4,44 +4,46 @@ GO
 USE CompanyDB;
 GO
 
+
 CREATE TABLE tbl_regions (
-    region_id INT PRIMARY KEY,
+    region_id INT PRIMARY KEY IDENTITY(1,1),
     region_name NVARCHAR(100)
 );
 
 CREATE TABLE tbl_countries (
-    country_id CHAR(2) PRIMARY KEY,
+    country_id INT PRIMARY KEY IDENTITY(1,1),
     country_name NVARCHAR(100),
     region_id INT,
     FOREIGN KEY (region_id) REFERENCES tbl_regions(region_id)
 );
 
 CREATE TABLE tbl_locations (
-    location_id INT PRIMARY KEY,
+    location_id INT PRIMARY KEY IDENTITY(1,1),
     street_address NVARCHAR(100),
     postal_code NVARCHAR(20),
     city NVARCHAR(100),
     state_province NVARCHAR(100),
-    country_id CHAR(2),
+    country_id INT,
     FOREIGN KEY (country_id) REFERENCES tbl_countries(country_id)
 );
 
 CREATE TABLE tbl_departments (
-    department_id INT PRIMARY KEY,
+    department_id INT PRIMARY KEY IDENTITY(1,1),
     department_name NVARCHAR(100),
     location_id INT,
     FOREIGN KEY (location_id) REFERENCES tbl_locations(location_id)
 );
 
+
 CREATE TABLE tbl_jobs (
-    job_id INT PRIMARY KEY,
+    job_id INT PRIMARY KEY IDENTITY(1,1),
     job_title NVARCHAR(100),
     min_salary DECIMAL(10, 2),
     max_salary DECIMAL(10, 2)
 );
 
 CREATE TABLE tbl_employees (
-    employee_id INT PRIMARY KEY,
+    employee_id INT PRIMARY KEY IDENTITY(1,1),
     first_name NVARCHAR(100),
     last_name NVARCHAR(100),
 	gender NVARCHAR(10),
@@ -73,21 +75,21 @@ CREATE TABLE tbl_job_histories (
 );
 
 CREATE TABLE tbl_accounts (
-    account_id INT PRIMARY KEY,
+    account_id INT PRIMARY KEY IDENTITY(1,1),
     username NVARCHAR(100),
     password NVARCHAR(100),
     employee_id INT,
 	otp INT,
     is_expire BIT,
     is_used_datetime DATETIME,
-    otp_expiry_datetime DATETIME;
+    otp_expiry_datetime DATETIME,
     FOREIGN KEY (employee_id) REFERENCES tbl_employees(employee_id)
 );
 
 
 
 CREATE TABLE tbl_roles (
-    role_id INT PRIMARY KEY,
+    role_id INT PRIMARY KEY IDENTITY(1,1),
     role_name NVARCHAR(100)
 );
 
@@ -100,7 +102,7 @@ CREATE TABLE tbl_account_roles (
 );
 
 CREATE TABLE tbl_permissions (
-    permission_id INT PRIMARY KEY,
+    permission_id INT PRIMARY KEY IDENTITY(1,1),
     permission_name NVARCHAR(100)
 );
 

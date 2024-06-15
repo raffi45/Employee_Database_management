@@ -188,7 +188,3 @@ GO
 
 
 
-SELECT dbo.fn_check_employee_roles(3) AS RolesForAccount;
-
-DROP FUNCTION IF EXISTS fn_check_employee_roles;
-GO

@@ -15,7 +15,7 @@ BEGIN
     INSERT INTO tbl_job_histories (employee_id, start_date, end_date, job_id, department_id)
     VALUES (@EmployeeId, GETDATE(), NULL, (SELECT job_id FROM inserted), (SELECT department_id FROM inserted));
 END;
-
+GO
 -----------------------------------------------------
 
 CREATE TRIGGER tr_update_employee_job
@@ -50,7 +50,7 @@ BEGIN
         VALUES (@EmployeeId, GETDATE(), NULL, @NewJobId, (SELECT department_id FROM inserted));
     END;
 END;
-
+GO
 
 ---------------------------------------------------------------------------------
 CREATE TRIGGER tr_update_department
@@ -67,7 +67,7 @@ BEGIN
     INNER JOIN inserted i ON jh.employee_id = i.employee_id
     WHERE jh.end_date IS NULL; -- Hanya update jika status masih "Active"
 END;
-
+GO
 
 
 -------------------------------------
@@ -96,6 +96,7 @@ BEGIN
 
     
 END;
+GO
 
 -------------------------------------------------
 CREATE TRIGGER tr_delete_job
@@ -121,7 +122,7 @@ BEGIN
     SET job_id = NULL
     WHERE job_id = @DeletedJobId;
 END;
-
+GO
 --------------------------------------
 CREATE TRIGGER tr_delete_country
 ON tbl_countries
@@ -151,7 +152,7 @@ BEGIN
         WHERE c.country_id = @DeletedCountryId
     );
 END;
-
+GO
 
 -----------------------------------------------------------
 CREATE TRIGGER tr_delete_role
@@ -176,15 +177,9 @@ BEGIN
     DELETE FROM tbl_role_permissions
     WHERE role_id = @DeletedRoleId;
 
-    -- Update data di tbl_permissions jika tidak ada role yang memilikinya
-    UPDATE tbl_permissions
-    SET permission_id = NULL
-    WHERE permission_id NOT IN (
-        SELECT rp.permission_id
-        FROM tbl_role_permissions rp
-    );
+   
 END;
-
+GO
 
 ---------
 CREATE TRIGGER tr_status_leave_history
@@ -241,7 +236,7 @@ BEGIN
             AND end_date IS NULL;  -- Memastikan hanya catatan "Hand Over" yang masih aktif yang diperbarui
     END;
 END;
-
+GO
 -----------------------------------
 CREATE TRIGGER trg_update_otp_status
 ON tbl_accounts
@@ -260,6 +255,7 @@ BEGIN
         WHERE i.otp IS NOT NULL;  -- Hanya lakukan update jika otp tidak NULL (sudah digunakan)
     END
 END;
+GO
 
 -------------------------------------------------------------------------
 
