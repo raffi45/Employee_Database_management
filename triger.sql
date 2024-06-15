@@ -261,4 +261,40 @@ BEGIN
     END
 END;
 
+-------------------------------------------------------------------------
+
+CREATE TRIGGER trg_after_insert_employee
+ON dbo.tbl_employees
+AFTER INSERT
+AS
+BEGIN
+    -- Insert into tbl_accounts if not exists
+    INSERT INTO dbo.tbl_accounts (username, password, employee_id, otp, is_expire, is_used_datetime, otp_expiry_datetime)
+    SELECT
+        CONCAT(NEWID(), '@company.com'), -- Assuming you want to auto-generate a username
+        'default_password',             -- Set a default password, should be changed
+        i.employee_id,
+        NULL,                           -- Assuming no OTP at creation
+        0,                              -- Assuming the OTP is not expired
+        NULL,                           -- Assuming no datetime of OTP usage
+        NULL                            -- Assuming no OTP expiry datetime
+    FROM
+        inserted i
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM dbo.tbl_accounts a
+        WHERE a.employee_id = i.employee_id
+    );
+
+    -- Insert the employee role into tbl_account_roles
+    INSERT INTO dbo.tbl_account_roles (account_id, role_id)
+    SELECT 
+        a.account_id, 4 -- Assuming the role_id for 'employee' is 4
+    FROM 
+        dbo.tbl_accounts a
+    JOIN 
+        inserted i ON a.employee_id = i.employee_id;
+END;
+GO
+
 

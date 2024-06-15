@@ -57,17 +57,7 @@ CREATE TABLE tbl_employees (
     FOREIGN KEY (department_id) REFERENCES tbl_departments(department_id)
 );
 
-ALTER TABLE tbl_employees
-ADD 
-    gender NVARCHAR(10);
 
-ALTER TABLE tbl_job_histories
-ADD 
-    status NVARCHAR(10);
-
-ALTER TABLE tbl_employees
-DROP COLUMN status ;
-    
 
 CREATE TABLE tbl_job_histories (
     employee_id INT,
@@ -89,13 +79,11 @@ CREATE TABLE tbl_accounts (
     employee_id INT,
 	otp INT,
     is_expire BIT,
-    is_used_datetime DATETIME;
+    is_used_datetime DATETIME,
+    otp_expiry_datetime DATETIME;
     FOREIGN KEY (employee_id) REFERENCES tbl_employees(employee_id)
 );
 
-ALTER TABLE tbl_accounts
-ADD 
-   otp_expiry_datetime DATETIME;
 
 
 CREATE TABLE tbl_roles (

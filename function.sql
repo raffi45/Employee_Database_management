@@ -164,3 +164,31 @@ BEGIN
 
     RETURN @IsValid;
 END;
+GO
+
+-----------------------------------------------------------------------------
+
+CREATE FUNCTION dbo.fn_check_employee_roles (@employee_id INT)
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+    DECLARE @role_ids NVARCHAR(MAX);
+
+    SELECT @role_ids = (
+        SELECT STRING_AGG(CAST(ar.role_id AS NVARCHAR(10)), ', ')
+        FROM dbo.tbl_account_roles ar
+        JOIN dbo.tbl_accounts a ON ar.account_id = a.account_id
+        WHERE a.employee_id = @employee_id
+        FOR XML PATH(''), TYPE
+    ).value('.', 'NVARCHAR(MAX)');
+
+    RETURN @role_ids;
+END;
+GO
+
+
+
+SELECT dbo.fn_check_employee_roles(3) AS RolesForAccount;
+
+DROP FUNCTION IF EXISTS fn_check_employee_roles;
+GO

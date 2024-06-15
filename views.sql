@@ -28,7 +28,7 @@ FROM
     LEFT JOIN tbl_countries c ON l.country_id = c.country_id
     LEFT JOIN tbl_account_roles ar ON a.account_id = ar.account_id
     LEFT JOIN tbl_roles r ON ar.role_id = r.role_id;
-
+GO
 
 ----------------------------------------------
 
@@ -52,7 +52,7 @@ FROM
     LEFT JOIN tbl_accounts a ON e.employee_id = a.employee_id
     LEFT JOIN tbl_jobs j ON e.job_id = j.job_id
     LEFT JOIN tbl_attendance at ON e.employee_id = at.employee_id;
-
+GO
 --------------------------------------
 
 CREATE VIEW vw_leave_application_detail
@@ -70,7 +70,7 @@ FROM
     LEFT JOIN tbl_accounts a ON e.employee_id = a.employee_id
     LEFT JOIN tbl_jobs j ON e.job_id = j.job_id
     LEFT JOIN tbl_leave_requests la ON e.employee_id = la.employee_id;
-
+GO
 ------------------------------------------------------
 
 CREATE VIEW vw_leave_approval_detail
@@ -91,7 +91,7 @@ FROM
     INNER JOIN tbl_jobs j ON e.job_id = j.job_id
 WHERE
     la.status = 'Pending';
-
+GO
 
 -------------------------------------------------------
 
@@ -106,4 +106,4 @@ FROM
     tbl_employees e
     INNER JOIN tbl_accounts a ON e.employee_id = a.employee_id
     LEFT JOIN tbl_leave_requests la ON e.employee_id = la.employee_id;
-
+GO
