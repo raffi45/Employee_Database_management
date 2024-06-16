@@ -57,13 +57,10 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @IsValidEmail BIT;
     DECLARE @IsValidPassword BIT;
     DECLARE @otp_code NVARCHAR(10);
     DECLARE @otp_expiry_minutes INT = 10;  -- Waktu kedaluwarsa OTP dalam menit
 
-    -- Validasi email format
-    EXEC @IsValidEmail = dbo.func_email_format @username;
 
     -- Validasi password policy
     EXEC @IsValidPassword = dbo.func_password_policy @new_password;
@@ -76,7 +73,7 @@ BEGIN
     EXEC @IsValidOTP = dbo.func_validate_otp @username, @otp_code;
 
     -- Check validasi email, password, dan OTP
-    IF @IsValidEmail = 1 AND @IsValidPassword = 1 AND @IsValidOTP = 1
+    IF  @IsValidPassword = 1 AND @IsValidOTP = 1
     BEGIN
         -- Update password
         UPDATE tbl_accounts
@@ -94,15 +91,16 @@ END;
 --------------------------------------------
 CREATE PROCEDURE sp_generate_otp
     @username NVARCHAR(100),
-    @otp_length INT = 6,  -- Panjang default OTP adalah 6 digit
-    @otp_expiry_minutes INT = 10  -- Waktu kedaluwarsa OTP dalam menit
+    @otp_length INT = 6,  -- Default length of OTP is 6 digits
+    @otp_expiry_minutes INT = 10,  -- OTP expiration time in minutes
+    @otp_code NVARCHAR(10) OUTPUT,  -- Output parameter for OTP code
+    @expiry_datetime DATETIME OUTPUT  -- Output parameter for OTP expiry datetime
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @otp_code NVARCHAR(10);  -- Panjang OTP maksimal 10 digit
     DECLARE @current_datetime DATETIME = GETDATE();
-    DECLARE @expiry_datetime DATETIME = DATEADD(MINUTE, @otp_expiry_minutes, @current_datetime);
+    DECLARE @expiry_datetime_internal DATETIME = DATEADD(MINUTE, @otp_expiry_minutes, @current_datetime);
 
     -- Generate random OTP code
     SET @otp_code = '';
@@ -117,19 +115,23 @@ BEGIN
         -- Update existing OTP record
         UPDATE tbl_accounts
         SET otp = @otp_code,
-            is_expire = 0,  -- OTP belum kedaluwarsa
+            is_expire = 0,  -- OTP is not expired yet
             is_used_datetime = NULL,  -- Reset is_used_datetime
-            otp_expiry_datetime = @expiry_datetime  -- Set waktu kedaluwarsa OTP
+            otp_expiry_datetime = @expiry_datetime_internal  -- Set OTP expiry datetime
         WHERE username = @username;
     END
     ELSE
     BEGIN
         -- Insert new OTP record
         INSERT INTO tbl_accounts (username, otp, is_expire, is_used_datetime, otp_expiry_datetime)
-        VALUES (@username, @otp_code, 0, NULL, @expiry_datetime);
+        VALUES (@username, @otp_code, 0, NULL, @expiry_datetime_internal);
     END;
 
+    -- Set output parameters
+    SET @expiry_datetime = @expiry_datetime_internal;
+
     -- Return OTP code for user
-    SELECT @otp_code AS otp_code, @expiry_datetime AS expiry_datetime;
+    SELECT @otp_code AS otp_code, @expiry_datetime_internal AS expiry_datetime;
 END;
+
 

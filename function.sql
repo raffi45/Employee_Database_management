@@ -19,11 +19,6 @@ BEGIN
 END;
 GO
 
-SELECT 
-    email,
-    dbo.func_email_format(email) AS IsValidEmail
-FROM 
-    tbl_employees;
 
 
 ------------------------------------------------------
@@ -185,6 +180,29 @@ BEGIN
     RETURN @role_ids;
 END;
 GO
+
+---------------------------------------------------
+
+CREATE FUNCTION dbo.fn_validate_user_identity (@AddingEmployeeId INT, @EmployeeId INT)
+RETURNS BIT
+AS
+BEGIN
+    DECLARE @IsValid BIT;
+
+    -- Periksa apakah ID karyawan yang menambahkan sama dengan ID karyawan yang ingin ditambahkan
+    IF @AddingEmployeeId = @EmployeeId
+    BEGIN
+        SET @IsValid = 1;
+    END
+    ELSE
+    BEGIN
+        SET @IsValid = 0;
+    END
+
+    RETURN @IsValid;
+END;
+GO
+
 
 
 

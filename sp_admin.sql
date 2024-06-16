@@ -43,7 +43,7 @@ BEGIN
         INSERT INTO tbl_employees (first_name, last_name, gender, email, phone_number, hire_date, job_id, salary, manager_id, department_id)
         VALUES (@first_name, @last_name, @gender, @email, @phone_number, @hire_date, @job_id, @salary, @manager_id, @department_id);
 
-        -- Additional operations as needed
+
         
         SELECT 'Employee registered successfully.' AS message;
     END
@@ -111,6 +111,7 @@ BEGIN
     WHERE 
         employee_id = @EmployeeId; 
 
+    -- Jika ID pekerjaan berubah, masukkan sejarah pekerjaan (trigger akan menangani ini)
     IF @JobId IS NOT NULL AND @JobId <> @OldJobId
     BEGIN
         -- Masukkan sejarah pekerjaan untuk pekerjaan lama dengan status "Hand Over"
@@ -471,40 +472,6 @@ GO
 
 -----------------------------------------------------------------------------
 
-CREATE PROCEDURE dbo.sp_delete_country
-    @CountryId INT, 
-    @DeletingEmployeeId INT 
-AS
-BEGIN
-    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
-    DECLARE @RoleCheck NVARCHAR(MAX);
-
-    -- Periksa apakah karyawan yang melakukan penghapusan memiliki peran yang sesuai
-    SET @RoleCheck = dbo.fn_check_employee_roles(@DeletingEmployeeId);
-    
-    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
-    IF CHARINDEX('1', @RoleCheck) = 0 
-    BEGIN
-        RAISERROR('Anda tidak memiliki izin untuk menghapus negara.', 16, 1);
-        RETURN;
-    END
-
-    -- Periksa apakah negara yang akan dihapus ada dalam tabel tbl_countries
-    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_countries WHERE country_id = @CountryId)
-    BEGIN
-        RAISERROR('Negara tidak ditemukan.', 16, 1);
-        RETURN;
-    END
-
-    -- Hapus negara dari tabel tbl_countries
-    DELETE FROM dbo.tbl_countries
-    WHERE country_id = @CountryId;
-
-    -- Berikan pesan bahwa negara berhasil dihapus
-    PRINT 'Negara berhasil dihapus.';
-END;
-GO
--------------------------------------------------------------------------------------------------------------------------------
 CREATE PROCEDURE dbo.sp_add_region
     @RegionName NVARCHAR(100), 
     @AddingEmployeeId INT 
@@ -568,40 +535,6 @@ BEGIN
 END;
 GO
 
----------------------------------------------------------------------------------------
-CREATE PROCEDURE dbo.sp_delete_region
-    @RegionId INT, 
-    @DeletingEmployeeId INT 
-AS
-BEGIN
-    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
-    DECLARE @RoleCheck NVARCHAR(MAX);
-
-    -- Periksa apakah karyawan yang melakukan penghapusan memiliki peran yang sesuai
-    SET @RoleCheck = dbo.fn_check_employee_roles(@DeletingEmployeeId);
-    
-    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
-    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
-    BEGIN
-        RAISERROR('Anda tidak memiliki izin untuk menghapus region.', 16, 1);
-        RETURN;
-    END
-
-    -- Periksa apakah region yang akan dihapus ada dalam tabel tbl_regions
-    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_regions WHERE region_id = @RegionId)
-    BEGIN
-        RAISERROR('Region tidak ditemukan.', 16, 1);
-        RETURN;
-    END
-
-  
-    DELETE FROM dbo.tbl_regions
-    WHERE region_id = @RegionId;
-
-   
-    PRINT 'Region berhasil dihapus.';
-END;
-GO
 
 ----------------------------------------------------------------------------------------------------------
 CREATE PROCEDURE dbo.sp_add_role
@@ -664,44 +597,6 @@ BEGIN
     WHERE role_id = @RoleId;
 
     PRINT 'Nama role berhasil diubah.';
-END;
-GO
-
-------------------------------------------------------------------------------------------------------------------------------------------
-CREATE PROCEDURE dbo.sp_delete_role
-    @RoleId INT, 
-    @DeletingEmployeeId INT 
-AS
-BEGIN
-    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
-    DECLARE @RoleCheck NVARCHAR(MAX);
-
-    -- Periksa apakah karyawan yang melakukan penghapusan memiliki peran yang sesuai
-    SET @RoleCheck = dbo.fn_check_employee_roles(@DeletingEmployeeId);
-    
-    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
-    IF CHARINDEX('1', @RoleCheck) = 0 
-    BEGIN
-        RAISERROR('Anda tidak memiliki izin untuk menghapus role.', 16, 1);
-        RETURN;
-    END
-
-    -- Periksa apakah role yang akan dihapus ada dalam tabel tbl_roles
-    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_roles WHERE role_id = @RoleId)
-    BEGIN
-        RAISERROR('Role tidak ditemukan.', 16, 1);
-        RETURN;
-    END
-
-    -- Hapus role dari tabel tbl_roles
-    DELETE FROM dbo.tbl_roles
-    WHERE role_id = @RoleId;
-
-   
-    DELETE FROM dbo.tbl_account_roles
-    WHERE role_id = @RoleId;
-
-    PRINT 'Role berhasil dihapus.';
 END;
 GO
 
@@ -928,13 +823,13 @@ GO
 ---------------------------------------------------------
 
 CREATE PROCEDURE dbo.sp_edit_leave_request
-    @LeaveRequestId INT, -- ID pengajuan cuti yang akan diedit
-    @EmployeeId INT, -- ID karyawan yang mengajukan cuti
-    @LeaveType NVARCHAR(50), -- Jenis cuti
-    @StartDate DATE, -- Tanggal mulai cuti
-    @EndDate DATE, -- Tanggal berakhir cuti
-    @Status NVARCHAR(20), -- Status cuti
-    @EditingEmployeeId INT -- ID karyawan yang melakukan pengeditan
+    @LeaveRequestId INT= NULL, 
+    @EmployeeId INT= NULL, 
+    @LeaveType NVARCHAR(50)= NULL, 
+    @StartDate DATE= NULL,
+    @EndDate DATE= NULL, 
+    @Status NVARCHAR(20)= NULL,
+    @EditingEmployeeId INT 
 AS
 BEGIN
     -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
