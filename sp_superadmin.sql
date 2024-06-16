@@ -71,8 +71,8 @@ CREATE PROCEDURE dbo.sp_edit_employee
     @EditingEmployeeId INT 
 AS
 BEGIN
-    DECLARE @RoleCheck NVARCHAR(MAX); -- Variabel untuk menyimpan hasil pengecekan peran
-    DECLARE @OldJobId INT; -- Variabel untuk menyimpan ID pekerjaan lama
+    DECLARE @RoleCheck NVARCHAR(MAX); 
+    DECLARE @OldJobId INT; 
 
     -- Periksa apakah karyawan yang melakukan edit memiliki peran yang tepat
     SET @RoleCheck = dbo.fn_check_employee_roles(@EditingEmployeeId);
@@ -109,7 +109,7 @@ BEGIN
         manager_id = COALESCE(@ManagerId, manager_id), 
         department_id = COALESCE(@DepartmentId, department_id)
     WHERE 
-        employee_id = @EmployeeId; -- Tentukan karyawan berdasarkan EmployeeId
+        employee_id = @EmployeeId; 
 
     -- Jika ID pekerjaan berubah, masukkan sejarah pekerjaan (trigger akan menangani ini)
     IF @JobId IS NOT NULL AND @JobId <> @OldJobId
@@ -164,10 +164,9 @@ END;
 GO
 --------------------------------------------------------------------------
 CREATE PROCEDURE dbo.sp_add_department
-	@departmentid INT,
-    @DepartmentName NVARCHAR(100), -- Nama departemen baru
-    @LocationId INT, -- ID lokasi untuk departemen baru
-    @AddingEmployeeId INT -- ID karyawan yang melakukan penambahan
+    @DepartmentName NVARCHAR(100), 
+    @LocationId INT, 
+    @AddingEmployeeId INT 
 AS
 BEGIN
     -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
@@ -191,23 +190,522 @@ BEGIN
     END
 
     -- Tambahkan departemen baru ke tabel tbl_departments
-    INSERT INTO dbo.tbl_departments (department_id,department_id, location_id)
-    VALUES ( @departmentid,@DepartmentName, @LocationId);
+    INSERT INTO dbo.tbl_departments (department_name, location_id)
+    VALUES (@DepartmentName, @LocationId);
 
-    -- Berikan pesan bahwa departemen berhasil ditambahkan
+
     PRINT 'Departemen baru berhasil ditambahkan.';
 END;
 GO
 
+------------------------------------------------------------------------------------
 
-DROP PROCEDURE dbo.sp_add_department;
+CREATE PROCEDURE dbo.sp_edit_department
+    @DepartmentId INT, -- ID departemen yang akan diedit
+    @NewDepartmentName NVARCHAR(100), -- Nama baru departemen
+    @NewLocationId INT, -- ID lokasi baru untuk departemen
+    @EditingEmployeeId INT -- ID karyawan yang melakukan perubahan
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan perubahan memiliki peran yang tepat
+    SET @RoleCheck = dbo.fn_check_employee_roles(@EditingEmployeeId);
+
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk mengedit departemen.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah departemen yang diberikan ada dalam tabel tbl_departments
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_departments WHERE department_id = @DepartmentId)
+    BEGIN
+        RAISERROR('Departemen tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah lokasi yang diberikan ada dalam tabel tbl_locations
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_locations WHERE location_id = @NewLocationId)
+    BEGIN
+        RAISERROR('Lokasi tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+    -- Update data departemen di tabel tbl_departments
+    UPDATE dbo.tbl_departments
+    SET department_name = @NewDepartmentName, location_id = @NewLocationId
+    WHERE department_id = @DepartmentId;
+
+    -- Berikan pesan bahwa departemen berhasil diedit
+    PRINT 'Departemen berhasil diedit.';
+END;
 GO
 
-EXEC dbo.sp_add_department 
-    @DepartmentName = 'IT Department on', -- Nama departemen baru
-    @LocationId = 1, -- ID lokasi untuk departemen baru
-    @AddingEmployeeId = 2; -- ID karyawan yang melakukan penambahan
+---------------------------------------------------------------------------
+
+
+CREATE PROCEDURE dbo.sp_delete_department
+    @DepartmentId INT, 
+    @DeletingEmployeeId INT 
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan penghapusan memiliki peran yang tepat
+    SET @RoleCheck = dbo.fn_check_employee_roles(@DeletingEmployeeId);
+
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk menghapus departemen.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah departemen yang diberikan ada dalam tabel tbl_departments
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_departments WHERE department_id = @DepartmentId)
+    BEGIN
+        RAISERROR('Departemen tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+
+    DELETE FROM dbo.tbl_departments
+    WHERE department_id = @DepartmentId;
+
+    
+    PRINT 'Departemen berhasil dihapus.';
+END;
 GO
 
+------------------------------------------------------------------------------
+
+CREATE PROCEDURE dbo.sp_add_job
+    @JobTitle NVARCHAR(100), -- Judul pekerjaan baru
+    @MinSalary DECIMAL(10, 2), -- Gaji minimum untuk pekerjaan baru
+    @MaxSalary DECIMAL(10, 2), -- Gaji maksimum untuk pekerjaan baru
+    @AddingEmployeeId INT -- ID karyawan yang melakukan penambahan
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan penambahan memiliki peran yang tepat
+    SET @RoleCheck = dbo.fn_check_employee_roles(@AddingEmployeeId);
+    
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk menambahkan pekerjaan.', 16, 1);
+        RETURN;
+    END
+
+    -- Tambahkan pekerjaan baru ke tabel tbl_jobs
+    INSERT INTO dbo.tbl_jobs (job_title, min_salary, max_salary)
+    VALUES (@JobTitle, @MinSalary, @MaxSalary);
+
+    -- Berikan pesan bahwa pekerjaan baru berhasil ditambahkan
+    PRINT 'Pekerjaan baru berhasil ditambahkan.';
+END;
+GO
+------------------------------------------------------------------------------------------
+
+CREATE PROCEDURE dbo.sp_edit_job
+    @JobId INT,     
+    @JobTitle NVARCHAR(100), 
+    @MinSalary DECIMAL(10, 2), 
+    @MaxSalary DECIMAL(10, 2), 
+    @EditingEmployeeId INT 
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan pengeditan memiliki peran yang tepat
+    SET @RoleCheck = dbo.fn_check_employee_roles(@EditingEmployeeId);
+    
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk mengedit pekerjaan.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah pekerjaan dengan @JobId ada dalam tabel tbl_jobs
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_jobs WHERE job_id = @JobId)
+    BEGIN
+        RAISERROR('Pekerjaan tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+
+    UPDATE dbo.tbl_jobs
+    SET job_title = @JobTitle,
+        min_salary = @MinSalary,
+        max_salary = @MaxSalary
+    WHERE job_id = @JobId;
+
+  
+    PRINT 'Pekerjaan berhasil diubah.';
+END;
+GO
+
+---------------------------------------------------------------------------------------------------------------------------------------
+
+CREATE PROCEDURE dbo.sp_delete_job
+    @JobId INT,
+    @DeletingEmployeeId INT
+AS
+BEGIN
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Memeriksa peran karyawan yang melakukan penghapusan
+    SET @RoleCheck = dbo.fn_check_employee_roles(@DeletingEmployeeId);
+    
+    -- Jika karyawan tidak memiliki peran yang sesuai, hentikan proses
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk menghapus pekerjaan.', 16, 1);
+        RETURN;
+    END
+
+    -- Memeriksa apakah pekerjaan yang akan dihapus ada dalam tabel tbl_jobs
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_jobs WHERE job_id = @JobId)
+    BEGIN
+        RAISERROR('Pekerjaan tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+    -- Menghapus pekerjaan dari tabel tbl_jobs
+    DELETE FROM dbo.tbl_jobs
+    WHERE job_id = @JobId;
+
+    PRINT 'Pekerjaan berhasil dihapus.';
+END;
+GO
+
+
+-----------------------------------------------------------------------------------
+CREATE PROCEDURE dbo.sp_add_country
+    @CountryName NVARCHAR(100), 
+    @RegionId INT, 
+    @AddingEmployeeId INT 
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan penambahan memiliki peran yang sesuai
+    SET @RoleCheck = dbo.fn_check_employee_roles(@AddingEmployeeId);
+    
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk menambahkan negara.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah region yang diberikan ada dalam tabel tbl_regions
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_regions WHERE region_id = @RegionId)
+    BEGIN
+        RAISERROR('Region tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+    -- Tambahkan negara baru ke dalam tabel tbl_countries
+    INSERT INTO dbo.tbl_countries (country_name, region_id)
+    VALUES (@CountryName, @RegionId);
+
+    -- Berikan pesan bahwa negara berhasil ditambahkan
+    PRINT 'Negara baru berhasil ditambahkan.';
+END;
+GO
+
+--------------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE dbo.sp_edit_country
+    @CountryId INT, 
+    @CountryName NVARCHAR(100), 
+    @RegionId INT, 
+    @EditingEmployeeId INT 
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan pengeditan memiliki peran yang sesuai
+    SET @RoleCheck = dbo.fn_check_employee_roles(@EditingEmployeeId);
+    
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk mengedit negara.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah negara yang akan diedit ada dalam tabel tbl_countries
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_countries WHERE country_id = @CountryId)
+    BEGIN
+        RAISERROR('Negara tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah region yang diberikan ada dalam tabel tbl_regions
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_regions WHERE region_id = @RegionId)
+    BEGIN
+        RAISERROR('Region tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+    -- Update data negara di tabel tbl_countries
+    UPDATE dbo.tbl_countries
+    SET country_name = @CountryName,
+        region_id = @RegionId
+    WHERE country_id = @CountryId;
+
+    -- Berikan pesan bahwa negara berhasil diubah
+    PRINT 'Negara berhasil diubah.';
+END;
+GO
+
+-----------------------------------------------------------------------------
+
+CREATE PROCEDURE dbo.sp_delete_country
+    @CountryId INT, 
+    @DeletingEmployeeId INT 
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan penghapusan memiliki peran yang sesuai
+    SET @RoleCheck = dbo.fn_check_employee_roles(@DeletingEmployeeId);
+    
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk menghapus negara.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah negara yang akan dihapus ada dalam tabel tbl_countries
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_countries WHERE country_id = @CountryId)
+    BEGIN
+        RAISERROR('Negara tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+    -- Hapus negara dari tabel tbl_countries
+    DELETE FROM dbo.tbl_countries
+    WHERE country_id = @CountryId;
+
+    -- Berikan pesan bahwa negara berhasil dihapus
+    PRINT 'Negara berhasil dihapus.';
+END;
+GO
+-------------------------------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE dbo.sp_add_region
+    @RegionName NVARCHAR(100), 
+    @AddingEmployeeId INT 
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan penambahan memiliki peran yang sesuai
+    SET @RoleCheck = dbo.fn_check_employee_roles(@AddingEmployeeId);
+    
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk menambahkan region.', 16, 1);
+        RETURN;
+    END
+
+  
+    INSERT INTO dbo.tbl_regions (region_name)
+    VALUES (@RegionName);
+
+  
+    PRINT 'Region baru berhasil ditambahkan.';
+END;
+GO
+ -------------------------------------------------------------------------------
+ CREATE PROCEDURE dbo.sp_edit_region
+    @RegionId INT, -- ID region yang akan diedit
+    @RegionName NVARCHAR(100), -- Nama region baru
+    @EditingEmployeeId INT -- ID karyawan yang melakukan pengeditan
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan pengeditan memiliki peran yang sesuai
+    SET @RoleCheck = dbo.fn_check_employee_roles(@EditingEmployeeId);
+    
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk mengedit region.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah region yang akan diedit ada dalam tabel tbl_regions
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_regions WHERE region_id = @RegionId)
+    BEGIN
+        RAISERROR('Region tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+    -- Update data region di tabel tbl_regions
+    UPDATE dbo.tbl_regions
+    SET region_name = @RegionName
+    WHERE region_id = @RegionId;
+
+    -- Berikan pesan bahwa region berhasil diubah
+    PRINT 'Region berhasil diubah.';
+END;
+GO
+
+---------------------------------------------------------------------------------------
+CREATE PROCEDURE dbo.sp_delete_region
+    @RegionId INT, 
+    @DeletingEmployeeId INT 
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan penghapusan memiliki peran yang sesuai
+    SET @RoleCheck = dbo.fn_check_employee_roles(@DeletingEmployeeId);
+    
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk menghapus region.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah region yang akan dihapus ada dalam tabel tbl_regions
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_regions WHERE region_id = @RegionId)
+    BEGIN
+        RAISERROR('Region tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+  
+    DELETE FROM dbo.tbl_regions
+    WHERE region_id = @RegionId;
+
+   
+    PRINT 'Region berhasil dihapus.';
+END;
+GO
+
+----------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE dbo.sp_add_role
+    @RoleName NVARCHAR(100),
+	@AddingEmployeeId INT 
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang akan menambahkan role memiliki peran yang sesuai
+    SET @RoleCheck = dbo.fn_check_employee_roles(@AddingEmployeeId);
+    
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk menambahkan role.', 16, 1);
+        RETURN;
+    END
+
+    
+    INSERT INTO dbo.tbl_roles (role_name)
+    VALUES (@RoleName);
+
+
+    PRINT 'Role baru berhasil ditambahkan.';
+END;
+GO
+
+-------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE dbo.sp_edit_role
+    @RoleId INT, 
+    @NewRoleName NVARCHAR(100),
+    @EditingEmployeeId INT 
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan pengubahan memiliki peran yang sesuai
+    SET @RoleCheck = dbo.fn_check_employee_roles(@EditingEmployeeId);
+    
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk mengubah nama role.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah role yang akan diubah namanya ada dalam tabel tbl_roles
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_roles WHERE role_id = @RoleId)
+    BEGIN
+        RAISERROR('Role tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+   
+    UPDATE dbo.tbl_roles
+    SET role_name = @NewRoleName
+    WHERE role_id = @RoleId;
+
+    PRINT 'Nama role berhasil diubah.';
+END;
+GO
+
+------------------------------------------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE dbo.sp_delete_role
+    @RoleId INT, 
+    @DeletingEmployeeId INT 
+AS
+BEGIN
+    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
+    DECLARE @RoleCheck NVARCHAR(MAX);
+
+    -- Periksa apakah karyawan yang melakukan penghapusan memiliki peran yang sesuai
+    SET @RoleCheck = dbo.fn_check_employee_roles(@DeletingEmployeeId);
+    
+    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
+    IF CHARINDEX('1', @RoleCheck) = 0 
+    BEGIN
+        RAISERROR('Anda tidak memiliki izin untuk menghapus role.', 16, 1);
+        RETURN;
+    END
+
+    -- Periksa apakah role yang akan dihapus ada dalam tabel tbl_roles
+    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_roles WHERE role_id = @RoleId)
+    BEGIN
+        RAISERROR('Role tidak ditemukan.', 16, 1);
+        RETURN;
+    END
+
+    -- Hapus role dari tabel tbl_roles
+    DELETE FROM dbo.tbl_roles
+    WHERE role_id = @RoleId;
+
+   
+    DELETE FROM dbo.tbl_account_roles
+    WHERE role_id = @RoleId;
+
+    PRINT 'Role berhasil dihapus.';
+END;
+GO
+
+--------------------------------------------------------------------
 
 
