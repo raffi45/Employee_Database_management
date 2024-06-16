@@ -1,4 +1,3 @@
-
 CREATE PROCEDURE dbo.sp_edit_employee_mng
     @EmployeeId INT, 
     @FirstName NVARCHAR(100) = NULL, 
@@ -203,6 +202,7 @@ BEGIN
         SELECT 'Leave request approval/rejection failed. Please check input data.' AS message;
     END;
 END;
+
 
 ---------------------------------------------------------------------------------------------------------------
 

@@ -1,4 +1,3 @@
-
 CREATE PROCEDURE dbo.sp_edit_employee_profile
     @EmployeeId INT,           
     @FirstName NVARCHAR(100) = NULL,    

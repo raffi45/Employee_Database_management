@@ -490,7 +490,6 @@ BEGIN
         RETURN;
     END
 
-  
     INSERT INTO dbo.tbl_regions (region_name)
     VALUES (@RegionName);
 
@@ -599,107 +598,6 @@ BEGIN
     PRINT 'Nama role berhasil diubah.';
 END;
 GO
-
---------------------------------------------------------------------
-CREATE PROCEDURE dbo.sp_add_permission
-    @PermissionName NVARCHAR(100),
-	@AddingEmployeeId INT 
-AS
-BEGIN
-    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
-    DECLARE @RoleCheck NVARCHAR(MAX);
-
-    -- Periksa apakah karyawan yang akan menambahkan permission memiliki peran yang sesuai
-    SET @RoleCheck = dbo.fn_check_employee_roles(@AddingEmployeeId);
-    
-    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
-    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
-    BEGIN
-        RAISERROR('Anda tidak memiliki izin untuk menambahkan permission.', 16, 1);
-        RETURN;
-    END
-
-  
-    INSERT INTO dbo.tbl_permissions (permission_name)
-    VALUES (@PermissionName);
-
-
-    PRINT 'Permission baru berhasil ditambahkan.';
-END;
-GO
-
---------------------------------------------------------------------------------------------------
-
-CREATE PROCEDURE dbo.sp_edit_permission
-    @PermissionId INT, 
-    @NewPermissionName NVARCHAR(100), 
-    @EditingEmployeeId INT 
-AS
-BEGIN
-    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
-    DECLARE @RoleCheck NVARCHAR(MAX);
-
-    -- Periksa apakah karyawan yang melakukan pengeditan memiliki peran yang sesuai
-    SET @RoleCheck = dbo.fn_check_employee_roles(@EditingEmployeeId);
-    
-    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
-    IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
-    BEGIN
-        RAISERROR('Anda tidak memiliki izin untuk mengedit permission.', 16, 1);
-        RETURN;
-    END
-
-    -- Periksa apakah permission yang akan diedit ada dalam tabel tbl_permissions
-    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_permissions WHERE permission_id = @PermissionId)
-    BEGIN
-        RAISERROR('Permission tidak ditemukan.', 16, 1);
-        RETURN;
-    END
-
- 
-    UPDATE dbo.tbl_permissions
-    SET permission_name = @NewPermissionName
-    WHERE permission_id = @PermissionId;
-
-
-    PRINT 'Permission berhasil diedit.';
-END;
-GO
-
----------------------------------------------------------------------------------
-CREATE PROCEDURE dbo.sp_delete_permission
-    @PermissionId INT, 
-    @DeletingEmployeeId INT 
-AS
-BEGIN
-    -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
-    DECLARE @RoleCheck NVARCHAR(MAX);
-
-    -- Periksa apakah karyawan yang melakukan penghapusan memiliki peran yang sesuai
-    SET @RoleCheck = dbo.fn_check_employee_roles(@DeletingEmployeeId);
-    
-    -- Jika peran tidak sesuai, munculkan pesan error dan berhenti
-    IF CHARINDEX('1', @RoleCheck) = 0
-    BEGIN
-        RAISERROR('Anda tidak memiliki izin untuk menghapus permission.', 16, 1);
-        RETURN;
-    END
-
-    -- Periksa apakah permission yang akan dihapus ada dalam tabel tbl_permissions
-    IF NOT EXISTS (SELECT 1 FROM dbo.tbl_permissions WHERE permission_id = @PermissionId)
-    BEGIN
-        RAISERROR('Permission tidak ditemukan.', 16, 1);
-        RETURN;
-    END
-
-   
-    DELETE FROM dbo.tbl_permissions
-    WHERE permission_id = @PermissionId;
-
-    PRINT 'Permission berhasil dihapus.';
-END;
-GO
-
 ------------------------------------------------------------
 CREATE PROCEDURE dbo.sp_add_attendance
     @EmployeeId INT, 
@@ -905,7 +803,6 @@ GO
 
 
 ---------------------------------------------------------------------------
-
 
 
 

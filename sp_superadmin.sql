@@ -9,7 +9,8 @@ CREATE PROCEDURE sp_register_employee
     @salary DECIMAL(10, 2),
     @manager_id INT,
     @department_id INT,
-    @password NVARCHAR(100)
+    @password NVARCHAR(100),
+	@EditingEmployeeId INT 
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -20,6 +21,7 @@ BEGIN
     DECLARE @IsMatchPassword BIT;
     DECLARE @IsValidGender BIT;
     DECLARE @IsValidSalary BIT;
+	DECLARE @RoleCheck NVARCHAR(MAX); 
 
     -- Validasi email
     EXEC @IsValidEmail = dbo.func_email_format @email;
@@ -36,7 +38,15 @@ BEGIN
     -- Validasi salary
     EXEC @IsValidSalary = dbo.func_salary @job_id, @salary;
 
+	-- Periksa apakah karyawan yang melakukan edit memiliki peran yang tepat
+    SET @RoleCheck = dbo.fn_check_employee_roles(@EditingEmployeeId);
 
+	IF CHARINDEX('1', @RoleCheck) = 0 AND CHARINDEX('2', @RoleCheck) = 0
+    BEGIN
+        -- Jika tidak memiliki peran yang sesuai, munculkan error
+        RAISERROR('Anda tidak memiliki izin untuk mengedit data karyawan.', 16, 1);
+        RETURN;
+    END
     -- Insert data jika semua validasi berhasil
     IF @IsValidEmail = 1 AND @IsValidPhone = 1 AND @IsValidPassword = 1 AND @IsValidGender = 1 AND @IsValidSalary = 1 AND @IsMatchPassword = 1
     BEGIN
@@ -126,6 +136,7 @@ BEGIN
     PRINT 'Data karyawan berhasil diperbarui.';
 END;
 GO
+
 ---------------------------------------------------------------------------------------------------
 
 CREATE PROCEDURE dbo.sp_delete_employee
@@ -200,10 +211,10 @@ GO
 ------------------------------------------------------------------------------------
 
 CREATE PROCEDURE dbo.sp_edit_department
-    @DepartmentId INT, -- ID departemen yang akan diedit
-    @NewDepartmentName NVARCHAR(100), -- Nama baru departemen
-    @NewLocationId INT, -- ID lokasi baru untuk departemen
-    @EditingEmployeeId INT -- ID karyawan yang melakukan perubahan
+    @DepartmentId INT, 
+    @NewDepartmentName NVARCHAR(100),
+    @NewLocationId INT, 
+    @EditingEmployeeId INT 
 AS
 BEGIN
     -- Deklarasi variabel untuk menyimpan hasil pengecekan peran
